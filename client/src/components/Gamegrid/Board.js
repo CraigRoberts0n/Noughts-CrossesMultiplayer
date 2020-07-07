@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Alert, Container } from 'react-bootstrap';
 import Square from './Square';
 import { useLocation, Link } from 'react-router-dom'
-// import { useLocation, useHistory, Link } from 'react-router-dom'
 
-const Board = ({ socket, ENDPOINT }) => {
+const Board = ({ socket }) => {
   const location = useLocation();
-  // const history = useHistory()
   const [squares, setSquares] = useState(Array(9).fill(null));
   const [xIsNext, setXIsNext] = useState(true);
   const [identifier, setIdentifier] = useState('');
@@ -16,8 +14,7 @@ const Board = ({ socket, ENDPOINT }) => {
   const [opponent, setOpponent] = useState({id: '', name: '', identifier: ''});
   const [errorMessage, setErrorMessage] = useState('');
 
-  // const [socketID, setsocketID] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(false); //////////////////
 
   const [gameStatus, setGameStatus] = useState('');
   const [isFinished, setIsFinished] = useState(false);
@@ -26,10 +23,13 @@ const Board = ({ socket, ENDPOINT }) => {
   const [endState, setEndState] = useState({variant : '', endGameMessage: ''});
 
   useEffect(() => {
+    //Get user Name, Room ID, and whether they Created or Joined Room 
     const { name, room, method } = location.state
 
+    //Set user name to state
     setName(name);
 
+    //If user created the Game set dependant states
     if(method === 'CREATE') {
       setRoom(room);
       setTurnPlayed(false)
@@ -40,32 +40,26 @@ const Board = ({ socket, ENDPOINT }) => {
       setTurnPlayed(true);
       setIsConnected(true)
       setIdentifier('⭕')
-      socket.emit('getOppDetails', { room }) 
+      socket.emit('getOppDetails', { room }) //Asks server to supply both users with opponent details
     }
 
     return () => {
       setIsConnected(false)  
+      
+      //On user exit of game, remove Room from server 
       socket.emit('removeRoom', { room })
       socket.emit('disconnect', { room })  
     }
 
-  }, [ENDPOINT, location, socket]);
-
-  // useEffect(() => {
-  //   console.log(socket.id, ' # ', socketID) // 
-  //   setsocketID(socket.id)
-  // }, [setsocketID, socket, socketID]);
-
-  // useEffect(() => {
-  //   if (socketID === undefined) { //the refresh redirect to home
-  //     history.push('/')
-  //   }
-  // }, [history, socketID]);
+  }, [location, socket]);
 
 
   useEffect(() => {
+    //Listens for server emit
     socket.on('oppDetails', ( [ {id: oppID1 , name: oppName1}, {id: oppID2 , name: oppName2} ]) => {
       setErrorMessage('')
+
+      //Sets the state of the oppenents ID, Name, and Identifier  
       oppID1 !== socket.id 
         ? setOpponent({ id: oppID1, name: oppName1, identifier: '❌' }) 
         : setOpponent({ id: oppID2, name: oppName2, identifier: '⭕' })
@@ -80,10 +74,12 @@ const Board = ({ socket, ENDPOINT }) => {
         setOppDisconnected(true)
       }
     })
-  }, [socket, isConnected, location]);
+  }, [socket, isConnected]);
 
 
   useEffect(() => {
+    //Listens for server emit
+    //Updates the Game grid with the new grid data supplied by the opponent
     socket.on('updateSquares', ({ squares, xIsNext }) => {
       setErrorMessage('')
       setSquares(squares);
@@ -94,8 +90,12 @@ const Board = ({ socket, ENDPOINT }) => {
 
 
   const handleClick = (i) => {
+    //When the user clicks on a Game Square
     const updateSquares = squares.slice();
+
+    //Checks whether the Square clicked was a valid move dependant on Game state and Position
     if (calculateWinner(updateSquares) || updateSquares[i] || turnPlayed || !opponent.name || isFinished || oppDisconnected){
+      //If invalid click, supplies the correct Error Message
       if (updateSquares[i]) setErrorMessage('Selected different Square');
       if (turnPlayed) setErrorMessage('Please Wait for Opponent to Play Turn');
       if (!opponent.name) setErrorMessage('Please Wait for an Opponent to Join');
@@ -104,21 +104,27 @@ const Board = ({ socket, ENDPOINT }) => {
       return;
     }
 
+    //Updates Game Grid with User Clicked Square
     updateSquares[i] = xIsNext ? '❌' : '⭕';
 
+    //Updates State for Error Message, Game Grid, and Current X or O
     setErrorMessage('');
     setSquares(updateSquares);
     setXIsNext(!xIsNext);
 
+    //Set played equal true, then emit updated Game Grid to server for opponent 
     setTurnPlayed(true);
     socket.emit('turnPlayed', { name, room, updateSquares, xIsNext });
   }
 
+  //Renders Game Square onto the display with onClick handler and unique identifier
   const renderSquare = (i) => {
     return <Square value={squares[i]} onClick={() => handleClick(i)} />;
   }
 
+  //Calculate if user has winning State
   const calculateWinner = (squares) => {
+    //Logic to check if Game grid is on Winning State
     const lines = [
       [0, 1, 2],
       [3, 4, 5],
@@ -136,6 +142,7 @@ const Board = ({ socket, ENDPOINT }) => {
       }
     }
 
+    //If all grid squares are not null, meaning game equals a tie
     if (squares.reduce((n,x) => n + (x !== null), 0) === 9) {
       return { 'winningIdentifier' : 'tie' }
     }
@@ -144,40 +151,47 @@ const Board = ({ socket, ENDPOINT }) => {
   }
 
   useEffect(() => {
+    //Check if State is Winning State
     const winner = calculateWinner(squares);
 
+    //If winning state
     if (winner){
-      // setGameStatus(`Winner: ${winner.winningIdentifier}`);
+      //Set game state to isFinished
       setIsFinished(true);
 
+      //If game is a tie, show Game Message
       if (winner.winningIdentifier === 'tie') {
         setEndState({ variant: 'warning', endGameMessage: 'Game is a Tie!' })
       } else {
+        //If a user won, show Game Message with correct Message and Styling 
         winner.winningIdentifier === identifier 
         ? setEndState({ variant: 'success', endGameMessage: 'Winner Winner!' })
         : setEndState({ variant: 'danger', endGameMessage: 'Hard Luck!' })
       }
       
     } else {
+      //Update next user Identfier 
       setGameStatus(`Next player: ${xIsNext ? '❌' : '⭕'}`)
     }
   },[squares, xIsNext, identifier])
 
   return (
     <div>
+      {/* Error Message Bootstrap Alert Message */}
       {errorMessage && (
           <Alert variant='danger' onClose={() => setErrorMessage('')} dismissible>
               <Alert.Heading>{ errorMessage }</Alert.Heading>
           </Alert>
       )}
 
-
+      {/* Game Finished Alert Message, dependent on Game Winner or Tie */}
       { isFinished ? (
         <Alert variant={endState.variant}>
           <Alert.Heading>{ endState.endGameMessage } <Alert.Link><Link to="/"> Go Back to Home </Link></Alert.Link></Alert.Heading>
         </Alert>
-      ) : null}
+      ) : null }
 
+      {/* If no opponent has joined, display Alert */}
       { opponent.name ? (
         null
       ) : <Alert variant="info">
@@ -185,6 +199,7 @@ const Board = ({ socket, ENDPOINT }) => {
           </Alert> }
 
 
+      {/* Display game Info */}
       <Container className="gameInfoContainer">
         <div>Room Identifier: <b>{ room }</b></div>
 
@@ -195,6 +210,7 @@ const Board = ({ socket, ENDPOINT }) => {
         <div className="status">{gameStatus}</div>
       </Container>
 
+      {/* Show Game Grid */}
       <Container className="gameBoard">
         <div className="board-row">
           {renderSquare(0)}

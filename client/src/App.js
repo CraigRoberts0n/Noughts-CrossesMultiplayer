@@ -2,9 +2,11 @@ import React from 'react';
 import { BrowserRouter as Router, Route } from 'react-router-dom'
 import io from 'socket.io-client';
 
+//Import CSS
 import 'bootstrap/dist/css/bootstrap.css';
 import './App.css';
 
+//Import Components
 import Board from './components/Gamegrid/Board';
 import Home from './components/Landing/Home';
 import SiteNavbar from './components/Reusable/SiteNavbar';
@@ -12,21 +14,27 @@ import Footer from './components/Reusable/Footer';
 
 let socket;
 
-const App = () => {
-  const ENDPOINT = '192.168.1.193:5000' || 'localhost:5000' || process.env.URL;
-  // socket = io(ENDPOINT);
-  socket = io.connect(window.location.hostname);
+//Endpoints for local dev 
+const ENDPOINT = 'localhost:5000';
 
+//Connect to Socket.io Server
+if (process.env.NODE_ENV === 'production') {
+  socket = io.connect(window.location.hostname);
+} else {
+  socket = io(ENDPOINT);
+}
+
+const App = () => {
   return (
-    <React.Fragment>
+    <>
     <Router>
       <SiteNavbar />
-        <Route path="/" exact component={() => <Home socket={socket} ENDPOINT={ENDPOINT} />} />
-        <Route path="/board" component={() => <Board socket={socket} ENDPOINT={ENDPOINT} />} />
+        <Route path="/" exact component={() => <Home socket={socket} />} />
+        <Route path="/board" component={() => <Board socket={socket} />} />
       <Footer />
     </Router>
-    </React.Fragment>
-);
+    </>
+  );
 }
 
 export default App;

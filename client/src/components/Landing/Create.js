@@ -6,16 +6,20 @@ import { Container, Form, Button } from 'react-bootstrap';
 const Create = ({ name, setName, room, setRoom, socket, setErrorMessage }) => {
     const [createStatus, setCreateStatus] = useState(false);
 
+    //onClick Handler
     const onClick = (e) => {
+        //Prevent page refresh
         e.preventDefault()
+
+        //Check if input is empty
         if (!name) {
             setErrorMessage('Enter all Fields')
         } else {
+            //Emit to server to Create a new Game
             socket.emit('create', { name }, ({ error, room }) => {
                 if (error) {
                     setErrorMessage(error)
                 } else {
-                    // socket.emit('updateRooms')
                     setRoom(room);
                     setCreateStatus(true)
                 }
@@ -23,6 +27,7 @@ const Create = ({ name, setName, room, setRoom, socket, setErrorMessage }) => {
         }
     }
 
+    //If true, Redirect to the Board Route passing state Data
     if(createStatus) {
         return <Redirect to={{
             pathname: '/board',

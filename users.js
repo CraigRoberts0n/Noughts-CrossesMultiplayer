@@ -1,5 +1,7 @@
+//Server users array
 const users = [];
 
+//Add user object to array
 const addUser = ({ id, name, room }) => {
     name = name.trim();
     room = room.trim();
@@ -7,16 +9,20 @@ const addUser = ({ id, name, room }) => {
     users.push(user)
 }
 
-const removeUser = (id) => {
-    const index = users.findIndex((user) => user.id === id);
-
-    if(index !== -1) {
-        return users.splice(index, 1)[0];
-    }
+//Remove room objects from array
+const removeRoom = (room) => {
+    for(i = 0; i < 2; i++){
+        let index = users.findIndex((user) => user.room === room);
+        if(index !== -1) {
+            users.splice(index, 1)[0];
+        }
+      }
 }
 
+//Return all users within a room
 const getUsersInRoom = (room) => users.filter((user) => user.room === room);
 
+//Return all active rooms that are joinable
 const getCurrentRooms = () => {
     const currentRooms = users.map((active) => active.room);
     tempRoomOcc = []
@@ -30,4 +36,4 @@ const getCurrentRooms = () => {
     return activeRooms;
 }
 
-module.exports = { addUser, getUsersInRoom, removeUser, getCurrentRooms, users }
+module.exports = { addUser, removeRoom, getUsersInRoom, getCurrentRooms, users }

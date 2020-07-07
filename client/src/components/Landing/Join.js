@@ -5,11 +5,16 @@ import { Container, Form, Button } from 'react-bootstrap';
 const Join = ({ name, setName, room, setRoom, socket, setErrorMessage}) => {
     const [joinStatus, setJoinStatus] = useState(false);
 
+    //onClick Handler
     const onClick = (e) => {
+        //Prevent page refresh
         e.preventDefault()
+
+        //Check if inputs are empty
         if (!name || !room) {
             setErrorMessage('Enter all Fields')
         } else {
+            //Emit to server to Join and existing game
             socket.emit('join', { name, room }, ({error}) => {
                 error 
                 ? setErrorMessage(error)
@@ -18,6 +23,7 @@ const Join = ({ name, setName, room, setRoom, socket, setErrorMessage}) => {
         }
     }
 
+    //If true, Redirect to the Board Route passing state Data
     if(joinStatus) {
         return <Redirect to={{
             pathname: '/board',

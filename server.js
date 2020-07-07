@@ -3,7 +3,7 @@ const cors = require('cors');
 const port = process.env.PORT || 5000;
 const path = require('path');
 
-const { addUser, removeUser, getUsersInRoom, getCurrentRooms, users } = require('./users');
+const { addUser, removeRoom, getUsersInRoom, getCurrentRooms, users } = require('./users');
 
 const app = express()
 const server = require('http').createServer(app);
@@ -13,32 +13,33 @@ app.use(cors());
 
 app.use(express.static(path.join(__dirname, '/client/build')));
 
-app.get('/*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+app.get('*', (req, res) => {
+    res.redirect('/')
 });
 
 let rooms = 0;
 
 io.on('connection', (socket) => {   
 
+    //Handle Creating a New Game Room
     socket.on('create', ({ name }, callback) => {
         socket.join('room-' + ++rooms); //join a room
-        // console.log(`Connected: ${name}, room-${rooms} Socket: ${socket.id}`);
-        addUser({ id: socket.id, name, room: `room-${rooms}` });
+        addUser({ id: socket.id, name, room: `room-${rooms}` }); //Add user to global users array
 
-        io.emit('updateActiveRooms', getCurrentRooms())
+        io.emit('updateActiveRooms', getCurrentRooms()) //Update the Active Rooms so opponent can join
 
         callback({name, room: `room-${rooms}`, socketID: socket.id})
     })
 
+    //Handle Joining an existing Room
     socket.on('join', ({ name, room }, callback) => {
         let socketRoom = io.nsps['/'].adapter.rooms[room];
  
+        //check if room has 1 user
         if(socketRoom && socketRoom.length == 1){
-            // console.log(`Connected: ${name}, ${room} Socket: ${socket.id}`);
-            socket.join(room);
-            addUser({ id: socket.id, name, room });
-            io.emit('updateActiveRooms', getCurrentRooms())
+            socket.join(room); //join room
+            addUser({ id: socket.id, name, room }); //Add user to global users array
+            io.emit('updateActiveRooms', getCurrentRooms()) //Update the Active Rooms 
 
             callback({name, room: `room-${rooms}`, socketID: socket.id, roomStatus: socketRoom})
         } else {
@@ -46,28 +47,33 @@ io.on('connection', (socket) => {
         }
     });
 
+    //Middle function for transfering game State between opponents  
     socket.on('turnPlayed', ({ name, room, updateSquares, xIsNext }) => {
         socket.broadcast.to(room).emit('updateSquares', { name, squares: updateSquares, xIsNext })
     })
 
+    //Returns all active rooms to Home
     socket.on('getActiveRooms', (callback) => {
         callback(getCurrentRooms())
     })
 
+    //Get the opponent details
     socket.on('getOppDetails',({ room }) => {
         io.to(room).emit('oppDetails', getUsersInRoom(room))
     })
 
+    //Remove room from server array
     socket.on('removeRoom', ({ room }) => {
-        const user = removeUser(socket.id)
+        removeRoom(room)
         io.to(room).emit('userDisconnect')
-        io.emit('updateActiveRooms', getCurrentRooms())
+        io.emit('updateActiveRooms', getCurrentRooms()) //Update the Active Rooms
     })
 
+    //Remove room from server array
     socket.on('disconnect', ({ room }) => {
-        const user = removeUser(socket.id)
+        removeRoom(room)
         io.to(room).emit('userDisconnect')
-        io.emit('updateActiveRooms', getCurrentRooms())
+        io.emit('updateActiveRooms', getCurrentRooms()) //Update the Active Rooms
     })
 
 });
