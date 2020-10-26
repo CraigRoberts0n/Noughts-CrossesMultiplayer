@@ -19,9 +19,9 @@ const ENDPOINT = 'localhost:5000';
 
 //Connect to Socket.io Server
 if (process.env.NODE_ENV === 'production') {
-  socket = io.connect(window.location.hostname);
+  socket = io.connect(`${window.location.hostname}:${window.location.port}`);
 } else {
-  socket = io(ENDPOINT);
+  socket = io(`${window.location.hostname}:${window.location.port}`);
 }
 
 const App = () => {
